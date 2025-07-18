@@ -166,6 +166,7 @@ exports.resendOtp = async (email) => {
     }
 
     const otp = otpService.generateOtp();
+    console.log(`Generated new OTP for user ${user.email}: ${otp}`);
     await otpService.saveOtp(user._id, otp);
 
     if (user.emailVerified) { // If email is already verified, assume this is for password reset

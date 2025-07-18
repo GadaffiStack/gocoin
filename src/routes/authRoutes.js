@@ -10,7 +10,7 @@ router.post('/login', validateBody(loginSchema), authController.login);
 router.post('/confirm-email', validateBody(confirmEmailSchema), authController.confirmEmail);
 router.post('/forgot-password', validateBody(forgotPasswordSchema), authController.forgotPassword);
 router.post('/reset-password/:token', validateBody(resetPasswordSchema), authController.resetPassword);
-router.post('/resend-otp', validateBody(resendOtpSchema), authController.resendOtp);
+router.post('/resend-otp', authController.resendOtp);
 router.post('/reset-password', validateBody(resetPasswordWithOtpSchema), authController.resetPasswordWithOtp);
 
 module.exports = router;
