@@ -38,6 +38,7 @@ exports.getTaskDetails = async (taskId) => {
 exports.submitTask = async (userId, taskId, submissionData) => {
     const task = await Task.findById(taskId);
     if (!task) {
+        console.error('Task not found for ID:', taskId);
         throw new AppError('Task not found.', 404);
     }
 
@@ -55,7 +56,7 @@ exports.submitTask = async (userId, taskId, submissionData) => {
     if (userTask && userTask.status === 'completed') {
         throw new AppError('You have already completed this task.', 400);
     }
-    if (userTask && userTask.status === 'submitted' || userTask.status === 'under_review') {
+    if (userTask && (userTask.status === 'submitted' || userTask.status === 'under_review')) {
         throw new AppError('You have already submitted this task, and it is under review.', 400);
     }
 

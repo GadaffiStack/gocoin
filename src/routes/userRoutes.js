@@ -20,6 +20,7 @@ router.post('/me/connect-wallet', validateBody(connectWalletSchema), userControl
 // NEW: Edit Profile
 router.put(
     '/me/profile',
+    authMiddleware.protect, // Only this route requires authentication
     userController.uploadUserPhoto, // Handles 'avatar' file upload
     validateBody(updateProfileSchema), // Validate other profile fields
     userController.updateUserProfile
@@ -37,6 +38,9 @@ router.put('/me/notification-settings', validateBody(notificationSettingsSchema)
 // NEW: Privacy Settings
 router.put('/me/privacy-settings', validateBody(privacySettingsSchema), userController.updatePrivacySettings);
 
+
+// Fetch interests by userId
+router.post('/me/interests/fetch', userController.getUserInterests);
 router.post('/logout', userController.logout);
 
 module.exports = router;

@@ -175,6 +175,22 @@ exports.resendOtp = async (email) => {
     }
 };
 
+exports.resetPasswordWithOtp = async (email, otp, newPassword) => {
+    const user = await User.findOne({ email });
+    if (!user) {
+        throw new AppError('User not found.', 404);
+    }
+    // Verify OTP
+    const isValid = await otpService.verifyOtp(user._id, otp);
+    if (!isValid) {
+        throw new AppError('Invalid or expired OTP.', 400);
+    }
+    user.password = newPassword; // Let Mongoose pre-save hook hash it
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+};
+
 exports.awardReferralBonus = async (referrerId, newUserId) => {
     const referrer = await User.findById(referrerId);
     if (!referrer) return; // Referrer might have been deleted

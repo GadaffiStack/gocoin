@@ -32,8 +32,8 @@ const upload = multer({
 exports.uploadUserPhoto = upload.single('avatar'); // Field name 'avatar' from UI
 
 exports.updateInterests = catchAsync(async (req, res, next) => {
-    const { interests } = req.body;
-    const updatedUser = await userService.updateUserInterests(req.user._id, interests);
+    const { interests, userId } = req.body;
+    const updatedUser = await userService.updateUserInterests(userId, interests);
 
     res.status(200).json({
         status: 'success',
@@ -43,8 +43,8 @@ exports.updateInterests = catchAsync(async (req, res, next) => {
 });
 
 exports.updateLocation = catchAsync(async (req, res, next) => {
-    const { country, stateRegion } = req.body;
-    await userService.updateUserLocation(req.user._id, country, stateRegion);
+    const { country, stateRegion, userId } = req.body;
+    await userService.updateUserLocation(userId, country, stateRegion);
 
     res.status(200).json({
         status: 'success',
@@ -172,5 +172,17 @@ exports.logout = catchAsync(async (req, res, next) => {
     res.status(200).json({
         status: 'success',
         message: 'Logged out successfully.'
+    });
+});
+
+exports.getUserInterests = catchAsync(async (req, res, next) => {
+    const { userId } = req.body;
+    const user = await userService.getUserProfile(userId);
+    if (!user) {
+        return next(new AppError('User not found.', 404));
+    }
+    res.status(200).json({
+        status: 'success',
+        interests: user.interests || []
     });
 });

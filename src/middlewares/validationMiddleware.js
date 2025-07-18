@@ -54,6 +54,15 @@ exports.resetPasswordSchema = Joi.object({
     })
 });
 
+exports.resetPasswordWithOtpSchema = Joi.object({
+    email: Joi.string().email().required(),
+    otp: Joi.string().length(6).required(),
+    newPassword: Joi.string().min(6).required(),
+    confirmPassword: Joi.string().valid(Joi.ref('newPassword')).required().messages({
+        'any.only': 'Password and confirm password do not match'
+    })
+});
+
 // --- User Profile Schemas ---
 exports.updateInterestsSchema = Joi.object({
     interests: Joi.array().items(Joi.string()).min(1).required()

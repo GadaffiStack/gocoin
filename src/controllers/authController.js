@@ -102,3 +102,12 @@ exports.resendOtp = catchAsync(async (req, res, next) => {
         message: 'New OTP has been sent to your email.'
     });
 });
+
+exports.resetPasswordWithOtp = catchAsync(async (req, res, next) => {
+    const { email, otp, newPassword } = req.body;
+    await authService.resetPasswordWithOtp(email, otp, newPassword);
+    res.status(200).json({
+        status: 'success',
+        message: 'Password reset successful.'
+    });
+});

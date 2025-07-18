@@ -37,6 +37,7 @@ exports.getTaskDetails = catchAsync(async (req, res, next) => {
 
 exports.submitTask = catchAsync(async (req, res, next) => {
     const { id } = req.params; // taskId
+    console.log('i am the id', id);
     const { submissionData } = req.body; // link, screenshot details, survey answers, code
 
     const result = await taskService.submitTask(req.user._id, id, submissionData);

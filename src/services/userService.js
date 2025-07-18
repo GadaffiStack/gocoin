@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const AppError = require('../utils/AppError');
 const bcrypt = require('bcryptjs'); // For password comparison
+const emailService = require('../services/emailService');
 
 exports.updateUserInterests = async (userId, interests) => {
     const user = await User.findByIdAndUpdate(userId, { interests: interests }, { new: true, runValidators: true });
@@ -65,10 +66,9 @@ exports.updateUserProfile = async (userId, updateFields) => {
         user.emailVerified = false; // Mark as unverified if email changes, requires re-confirmation
         // Trigger email confirmation OTP send here (optional, depends on policy)
         const otpService = require('./otpService');
-        const emailService = require('../utils/emailService');
         const otp = otpService.generateOtp();
         await otpService.saveOtp(user._id, otp);
-        await emailService.sendEmailConfirmation(user.email, otp);
+        await emailService.sendConfirmationEmail(user.email, otp);
         return { user, message: 'Profile updated. Please verify your new email address.' };
     }
 
