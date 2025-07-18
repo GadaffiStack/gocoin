@@ -20,10 +20,9 @@ router.post('/me/connect-wallet', validateBody(connectWalletSchema), userControl
 // NEW: Edit Profile
 router.put(
     '/me/profile',
-    authMiddleware.protect, // Only this route requires authentication
     userController.uploadUserPhoto, // Handles 'avatar' file upload
     validateBody(updateProfileSchema), // Validate other profile fields
-    userController.updateUserProfile
+    userController.updateUserProfileWithUserId // New controller method that uses userId from body
 );
 
 // NEW: Remove Wallet

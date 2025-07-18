@@ -64,16 +64,20 @@ exports.connectWallet = catchAsync(async (req, res, next) => {
 });
 
 // NEW: Update general user profile (username, email, country, state, avatar)
-exports.updateUserProfile = catchAsync(async (req, res, next) => {
-    const updateFields = { ...req.body };
 
+// NEW: Update user profile using userId from body
+exports.updateUserProfileWithUserId = catchAsync(async (req, res, next) => {
+    const { userId, ...updateFields } = req.body;
+    if (!userId) {
+        return next(new AppError('userId is required in request body.', 400));
+    }
     // If a file was uploaded, upload to Cloudinary and get URL
     if (req.file) {
         try {
             const result = await cloudinary.uploader.upload(
                 `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
                 {
-                    folder: `go-token/avatars/${req.user._id}`, // Organize by user
+                    folder: `go-token/avatars/${userId}`,
                     public_id: `avatar_${Date.now()}`
                 }
             );
@@ -83,9 +87,12 @@ exports.updateUserProfile = catchAsync(async (req, res, next) => {
             return next(new AppError('Failed to upload avatar image.', 500));
         }
     }
-
-    const { user, message } = await userService.updateUserProfile(req.user._id, updateFields);
-
+    // Check if user exists
+    const userExists = await userService.getUserProfile(userId);
+    if (!userExists) {
+        return next(new AppError('User not found.', 404));
+    }
+    const { user, message } = await userService.updateUserProfile(userId, updateFields);
     res.status(200).json({
         status: 'success',
         message: message,
@@ -96,7 +103,7 @@ exports.updateUserProfile = catchAsync(async (req, res, next) => {
                 country: user.country,
                 stateRegion: user.stateRegion,
                 avatarUrl: user.avatarUrl,
-                emailVerified: user.emailVerified // Crucial if email changes
+                emailVerified: user.emailVerified
             }
         }
     });
