@@ -203,3 +203,8 @@ exports.getUserActivity = async (userId, filter, options) => {
         activities
     };
 };
+
+exports.createTask = async (taskData) => {
+    const task = await Task.create(taskData);
+    return task;
+};

@@ -134,6 +134,26 @@ exports.submitTaskSchema = Joi.object({
     ).required()
 });
 
+exports.createTaskSchema = Joi.object({
+    campaignTopic: Joi.string().max(100).required(),
+    description: Joi.string().required(),
+    instructions: Joi.array().items(Joi.string().required()).min(1).required(),
+    rewards: Joi.object({
+        goToken: Joi.number().min(0).required(),
+        fiatEquivalent: Joi.number().min(0).required()
+    }).required(),
+    type: Joi.string().valid(
+        'social_media', 'content_creation', 'app_download', 'survey_polls',
+        'videos', 'email_subscription', 'product_testing', 'community',
+        'online_purchase_cashback'
+    ).required(),
+    submissionMethod: Joi.string().valid(
+        'link', 'screenshot', 'code', 'connect_account', 'direct_action'
+    ).required(),
+    requirements: Joi.object().optional(),
+    status: Joi.string().valid('active', 'inactive').optional()
+});
+
 // --- Wallet Schemas ---
 exports.swapCurrenciesSchema = Joi.object({
     fromCurrency: Joi.string().required(),

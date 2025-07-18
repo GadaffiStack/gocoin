@@ -150,7 +150,7 @@ exports.resetPassword = async (token, newPassword) => {
     }
 
     // Hash and save new password
-    user.password = await bcrypt.hash(newPassword, 12);
+    user.password = newPassword; // plain password, let pre-save hook hash it
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     await user.save(); // Mongoose pre-save hook handles hashing

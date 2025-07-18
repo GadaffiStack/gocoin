@@ -93,3 +93,11 @@ exports.rejectTaskAdmin = catchAsync(async (req, res, next) => {
         message: 'User task marked as rejected.'
     });
 });
+
+exports.createTask = catchAsync(async (req, res, next) => {
+    const task = await taskService.createTask(req.body);
+    res.status(201).json({
+        status: 'success',
+        data: { task }
+    });
+});
