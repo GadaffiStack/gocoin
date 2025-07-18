@@ -9,8 +9,8 @@ module.exports = {
         host: process.env.EMAIL_HOST || 'smtp.mailtrap.io',
         port: process.env.EMAIL_PORT || 2525,
         secure: process.env.EMAIL_SECURE === 'true' || false,
-        user: process.env.EMAIL_USER || 'your_mailtrap_user',
-        password: process.env.EMAIL_PASS || 'your_mailtrap_pass'
+        user: process.env.EMAIL_USER || 'aqqutelabs@gmail.com',
+        password: process.env.EMAIL_PASS || 'vvqgbvylgavunsgi'
     },
     frontendURL: process.env.FRONTEND_URL || 'http://localhost:5173',
     sms: { // Placeholder for SMS service
@@ -23,3 +23,6 @@ module.exports = {
     defaultFiatCurrency: process.env.DEFAULT_FIAT_CURRENCY || 'USD',
     env: process.env.NODE_ENV || 'development'
 };
+
+
+// vvqg bvyl gavu nsgi

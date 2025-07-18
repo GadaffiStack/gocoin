@@ -3,8 +3,8 @@ const express = require('express');
 const morgan = require('morgan'); // For request logging
 const helmet = require('helmet'); // For security headers
 const cors = require('cors'); // For Cross-Origin Resource Sharing
-const mongoSanitize = require('express-mongo-sanitize'); // Prevent MongoDB operator injection
-const xss = require('xss-clean'); // Prevent XSS attacks
+// const mongoSanitize = require('express-mongo-sanitize'); // Prevent MongoDB operator injection
+// const xss = require('xss-clean'); // Prevent XSS attacks
 const hpp = require('hpp'); // Prevent HTTP Parameter Pollution
 const rateLimit = require('express-rate-limit'); // For rate limiting requests
 
@@ -35,10 +35,10 @@ app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 // Data sanitization against NoSQL query injection
-app.use(mongoSanitize());
+// app.use(mongoSanitize());
 
 // Data sanitization against XSS
-app.use(xss());
+// app.use(xss());
 
 // Prevent parameter pollution
 app.use(hpp({

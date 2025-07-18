@@ -7,7 +7,7 @@ const AppError = require('../utils/AppError');
 const { generateToken } = require('../utils/jwt');
 const otpService = require('./otpService');
 const emailService = require('../services/emailService'); // Adjusted path
-const referralGenerator = require('../services/referralService');
+const referralGenerator = require('../utils/referralGenerator');
 const cryptoPriceService = require('../services/cryptoPriceService'); // Added cryptoPriceService
 const notificationService = require('../services/notificationService'); // Added notificationService
 const config = require('../config/config');
@@ -25,8 +25,7 @@ exports.signup = async (username, email, password, referralCode) => {
         throw new AppError('Email address has been registered before.', 400, { errorType: 'email_taken' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12); // Hash password
-
+    // Remove manual hashing, let Mongoose pre-save hook handle it
     const userReferralCode = referralGenerator.generate(); // Generate unique referral code for new user
     let referredByUserId = null;
     if (referralCode) {
@@ -41,26 +40,34 @@ exports.signup = async (username, email, password, referralCode) => {
     const newUser = await User.create({
         username,
         email,
-        password: hashedPassword,
+        password, // plain password
         emailVerified: false,
         referralCode: userReferralCode,
         referredBy: referredByUserId
     });
 
     const otp = otpService.generateOtp();
+    console.log(`Generated OTP for user ${newUser.email}: ${otp}`);
     await otpService.saveOtp(newUser._id, otp);
-    await emailService.sendEmailConfirmation(newUser.email, otp);
+    await emailService.sendConfirmationEmail(newUser.email, otp);
+    console.log(`Sent confirmation email to ${newUser.email} with OTP: ${otp}`);
 
     return {
         message: "User registered successfully. Please confirm your email to activate your account.",
-        userId: newUser._id
+        userId: newUser._id,
+        otp: otp // Return OTP in response for testing/demo
     };
 };
 
 exports.login = async (username, password) => {
     const user = await User.findOne({ username }).select('+password'); // Select password explicitly
-
-    if (!user || !(await user.correctPassword(password, user.password))) {
+    if (!user) {
+        console.log('User not found for username:', username);
+        throw new AppError('Invalid username or password.', 401);
+    }
+    console.log('Login attempt:', { username, inputPassword: password, storedPassword: user.password });
+    if (!(await user.correctPassword(password, user.password))) {
+        console.log('Password mismatch for user:', username);
         throw new AppError('Invalid username or password.', 401);
     }
 
@@ -68,7 +75,7 @@ exports.login = async (username, password) => {
         // Send a new OTP and inform user to verify email
         const otp = otpService.generateOtp();
         await otpService.saveOtp(user._id, otp);
-        await emailService.sendEmailConfirmation(user.email, otp);
+        await emailService.sendConfirmationEmail(user.email, otp);
         throw new AppError('Please confirm your email address to log in. A new OTP has been sent.', 403);
     }
 
@@ -126,6 +133,7 @@ exports.forgotPassword = async (email) => {
     await user.save({ validateBeforeSave: false });
 
     const resetURL = `${config.frontendURL}/reset-password/${resetToken}`;
+    console.log('the reset URL:', resetURL);
     await emailService.sendPasswordResetEmail(user.email, resetURL);
 };
 
@@ -163,7 +171,7 @@ exports.resendOtp = async (email) => {
     if (user.emailVerified) { // If email is already verified, assume this is for password reset
         await emailService.sendPasswordResetEmail(user.email, otp);
     } else { // Otherwise, for email confirmation
-        await emailService.sendEmailConfirmation(user.email, otp);
+        await emailService.sendConfirmationEmail(user.email, otp);
     }
 };
 

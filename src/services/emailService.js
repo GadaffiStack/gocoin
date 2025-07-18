@@ -4,9 +4,9 @@ const config = require('../config/config');
 
 // Create reusable transporter object using SMTP transport
 const transporter = nodemailer.createTransport({
-    host: config.email.host,
-    port: config.email.port,
-    secure: config.email.secure,
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
     auth: {
         user: config.email.user,
         pass: config.email.password

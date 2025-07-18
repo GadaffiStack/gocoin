@@ -4,7 +4,8 @@ const User = require('../models/User'); // Reusing User model to store OTP
 const config = require('../config/config');
 
 exports.generateOtp = () => {
-    // return otpGenerator.generateOtp();
+    // Simple 6-digit numeric OTP
+    return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
 exports.saveOtp = async (userId, otp) => {
