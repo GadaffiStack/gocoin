@@ -10,7 +10,7 @@ const Joi = require('joi'); // For schema definitions
 
 const router = express.Router();
 
-router.use(authMiddleware.protect); // All routes after this are protected
+// router.use(authMiddleware.protect); // All routes after this are protected
 
 router.get('/me', userController.getMe);
 router.put('/me/interests', validateBody(updateInterestsSchema), userController.updateInterests);
