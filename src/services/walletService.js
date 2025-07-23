@@ -10,6 +10,7 @@ const notificationService = require('./notificationService');
 const config = require('../config/config');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const axios = require('axios'); // For API calls
 
 exports.getWalletBalance = async (userId) => {
     const user = await User.findById(userId);
@@ -53,39 +54,49 @@ exports.swapCurrencies = async (userId, fromCurrency, fromAmount, toCurrency) =>
         const user = await User.findById(userId).session(session);
         if (!user) throw new AppError('User not found.', 404);
 
-        if (fromCurrency === 'GoToken' && user.goTokenBalance < fromAmount) {
-            throw new AppError('Insufficient GoToken balance.', 400);
-        }
-        // Add checks for other currency balances if they are managed within the app
-
         const exchangeRate = await cryptoPriceService.getExchangeRate(fromCurrency, toCurrency);
         if (!exchangeRate) {
             throw new AppError('Exchange rate not available for this pair.', 400);
         }
 
         const toAmount = fromAmount * exchangeRate;
-        const feeGoToken = fromAmount * 0.001; // Example 0.1% swap fee in GoToken
-        const netFromAmount = fromAmount + feeGoToken; // Deduct fee from source currency
+        const feeGoToken = fromAmount * 0.001; // 0.1% swap fee in GoToken
+        const netFromAmount = fromAmount + (fromCurrency === 'GoToken' ? feeGoToken : 0); // Fee only applies to GoToken
 
+        // Handle balance deduction based on currency type
         if (fromCurrency === 'GoToken') {
+            console.log('go token balance', user.goTokenBalance, netFromAmount);
             if (user.goTokenBalance < netFromAmount) {
-                 throw new AppError('Insufficient GoToken balance for swap including fee.', 400);
+                throw new AppError('Insufficient GoToken balance for swap including fee.', 400);
             }
             user.goTokenBalance -= netFromAmount;
+        } else if (fromCurrency === 'BTC') {
+            // Assume an external wallet or external balance field (e.g., user.btcBalance)
+            if (!user.btcBalance || user.btcBalance < fromAmount) {
+                throw new AppError('Insufficient BTC balance.', 400);
+            }
+            user.btcBalance -= fromAmount; // Deduct BTC from user's balance
+            // Optionally, convert fee to BTC if external wallet supports it
+            const feeInBtc = feeGoToken * (await cryptoPriceService.getExchangeRate('GoToken', 'BTC'));
+            user.btcBalance -= feeInBtc; // Deduct fee in BTC
         } else {
-            // For other currencies, assume external wallet deduction or other in-app balance
             throw new AppError(`Swap from ${fromCurrency} not yet supported for in-app balance.`, 400);
         }
+
         await user.save({ session }); // This will trigger pre-save hook for fiat equivalent
 
         const transaction = await Transaction.create([{
             userId: userId,
             type: 'swap',
-            amountGoToken: -netFromAmount, // Negative for outgoing from GoToken balance
-            amountFiat: await cryptoPriceService.convertGoTokenToFiat(-netFromAmount, config.defaultFiatCurrency),
+            amountGoToken: fromCurrency === 'GoToken' ? -netFromAmount : 0, // Only for GoToken swaps
+            amountFiat: await cryptoPriceService.convertGoTokenToFiat(
+                fromCurrency === 'GoToken' ? -netFromAmount : 0,
+                config.defaultFiatCurrency
+            ),
             fiatCurrency: config.defaultFiatCurrency,
-            status: 'completed', // Assuming instant swap for GoToken internal balance
-            feeGoToken: feeGoToken,
+            status: 'completed', // Assuming instant swap
+            feeGoToken: fromCurrency === 'GoToken' ? feeGoToken : 0, // Fee in GoToken only for GoToken swaps
+            feeBtc: fromCurrency === 'BTC' ? feeInBtc : 0, // Fee in BTC for BTC swaps
             details: {
                 fromCurrency: fromCurrency,
                 toCurrency: toCurrency,
@@ -293,102 +304,42 @@ exports.sendFunds = async (userId, sendType, details, password) => {
         switch (sendType) {
             case 'crypto':
                 transactionType = 'crypto_send';
-                sendResult = await paymentGatewayService.processCryptoTransfer(
-                    details.toWalletAddress,
-                    details.cryptoType || 'GoToken', // Allow sending other cryptos if integrated
-                    details.amount // Amount in cryptoType's unit
-                );
-                transactionDetails.transactionId = sendResult.transactionHash;
-                transactionDetails.status = sendResult.status;
+                sendResult = await axios.post('https://api.nowpayments.io/v1/payment', {
+                    price_amount: amountGoToken,
+                    price_currency: 'usd', // Adjust based on your app's currency
+                    pay_currency: details.cryptoType || 'BTC', // Default to Bitcoin
+                    ipn_callback_url: config.nowPaymentsCallbackUrl,
+                    order_id: `SEND_${userId}_${Date.now()}`,
+                    order_description: details.paymentDescription || 'GoToken Payment'
+                }, {
+                    headers: {
+                        'x-api-key': process.env.NOWPAYMENTS_API_KEY
+                    }
+                });
+                transactionDetails.transactionId = sendResult.data.payment_id;
+                transactionDetails.status = sendResult.data.payment_status;
                 transactionDetails.details.toWalletAddress = details.toWalletAddress;
-                transactionDetails.details.cryptoType = details.cryptoType;
-                transactionDetails.details.networkFee = sendResult.networkFee || 0;
-                break;
-
-            case 'mobile_money':
-                transactionType = 'mobile_money_send';
-                sendResult = await paymentGatewayService.processMobileMoneyTransfer(
-                    details.mobileNumber,
-                    details.network,
-                    amountFiat,
-                    fiatCurrency,
-                    details.paymentDescription
-                );
-                transactionDetails.transactionId = sendResult.transactionId;
-                transactionDetails.status = sendResult.status;
-                transactionDetails.details.mobileNumber = details.mobileNumber;
-                transactionDetails.details.mobileNetwork = details.network;
-                transactionDetails.details.beneficiaryName = details.beneficiaryName;
+                transactionDetails.details.cryptoType = details.cryptoType || 'BTC';
                 break;
 
             case 'bank_transfer':
                 transactionType = 'bank_transfer_send';
-                sendResult = await paymentGatewayService.processBankTransfer(
-                    details.accountNumber,
-                    details.bankName,
-                    amountFiat,
-                    fiatCurrency,
-                    details.paymentDescription
-                );
-                transactionDetails.transactionId = sendResult.transactionId;
-                transactionDetails.status = sendResult.status;
+                sendResult = await axios.post('https://api.paystack.co/transfer', {
+                    source: 'balance',
+                    amount: amountFiat * 100, // Convert to kobo (smallest unit for NGN)
+                    currency: fiatCurrency,
+                    recipient: details.recipientCode, // Paystack recipient code
+                    reason: details.paymentDescription
+                }, {
+                    headers: {
+                        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+                    }
+                });
+                transactionDetails.transactionId = sendResult.data.data.transfer_code;
+                transactionDetails.status = sendResult.data.data.status;
                 transactionDetails.details.accountNumber = details.accountNumber;
                 transactionDetails.details.bankName = details.bankName;
                 transactionDetails.details.beneficiaryName = details.beneficiaryName;
-                break;
-
-            case 'scan_to_pay':
-                // This assumes qrCodeData contains a payment link code
-                const paymentLink = await PaymentLink.findOne({ linkCode: details.qrCodeData }).session(session);
-                if (!paymentLink) {
-                    throw new AppError('Invalid QR code or payment link not found.', 400);
-                }
-                if (paymentLink.userId.equals(userId)) {
-                    throw new AppError('Cannot send payment to your own payment link.', 400);
-                }
-
-                // Credit the recipient's balance
-                const recipient = await User.findById(paymentLink.userId).session(session);
-                if (!recipient) {
-                    throw new AppError('Recipient not found for this payment link.', 404);
-                }
-
-                // Convert to target currency of the payment link if necessary
-                let amountToRecipientGoToken = amountGoToken;
-                if (paymentLink.currency !== 'GoToken') {
-                    // This is complex. For simplicity, assume payment links are always for GoToken for now.
-                    throw new AppError('Payment links only support GoToken for direct payments.', 400);
-                }
-                recipient.goTokenBalance += amountToRecipientGoToken;
-                await recipient.save({ session });
-
-                transactionType = 'send'; // From sender's perspective
-                transactionDetails.details.paymentLinkCode = details.qrCodeData;
-                transactionDetails.details.beneficiaryName = paymentLink.name;
-
-                // Create a 'received' transaction for the recipient
-                await Transaction.create([{
-                    userId: recipient._id,
-                    type: 'received',
-                    amountGoToken: amountToRecipientGoToken,
-                    amountFiat: await cryptoPriceService.convertGoTokenToFiat(amountToRecipientGoToken, paymentLink.currency === 'GoToken' ? config.defaultFiatCurrency : paymentLink.currency),
-                    fiatCurrency: paymentLink.currency === 'GoToken' ? config.defaultFiatCurrency : paymentLink.currency,
-                    status: 'completed',
-                    details: {
-                        paymentLinkCode: details.qrCodeData,
-                        fromAddress: user.username, // Or some identifier for sender
-                        paymentDescription: details.paymentDescription || `Payment via link: ${paymentLink.name}`
-                    }
-                }], { session });
-
-                await notificationService.createNotification(
-                    recipient._id,
-                    'transaction_status',
-                    `You received ${amountToRecipientGoToken} GoTokens via payment link "${paymentLink.name}" from ${user.username}.`,
-                    { transactionId: transaction[0]._id, type: 'received', amountGoToken: amountToRecipientGoToken }
-                );
-
-                sendResult = { success: true, status: 'completed', transactionId: `LINKPAY_${Date.now()}` };
                 break;
 
             default:
