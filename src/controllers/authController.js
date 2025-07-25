@@ -33,20 +33,17 @@ exports.login = catchAsync(async (req, res, next) => {
 
     const { user, token } = await authService.login(username, password);
 
+    // Optional: remove sensitive fields before sending response
+    user.password = undefined;
+
     res.status(200).json({
         status: 'success',
         message: 'Login successful',
         token,
-        user: {
-            _id: user._id,
-            username: user.username,
-            email: user.email,
-            goTokenBalance: user.goTokenBalance,
-            fiatEquivalentBalance: user.fiatEquivalentBalance,
-            // Add other user fields needed on login
-        }
+        user // return full user object
     });
 });
+
 
 exports.confirmEmail = catchAsync(async (req, res, next) => {
     const { userId, otp } = req.body;
