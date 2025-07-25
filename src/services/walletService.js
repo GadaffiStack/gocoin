@@ -118,6 +118,7 @@ exports.swapCurrencies = async (userId, fromCurrency, fromAmount, toCurrency) =>
 };
 
 exports.withdrawFunds = async (userId, withdrawalType, details, password) => {
+    console.log(' i am the details', details);
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -194,14 +195,17 @@ exports.withdrawFunds = async (userId, withdrawalType, details, password) => {
 
             case 'bank':
                 transactionType = 'bank_withdraw';
+                // FIXED: Corrected parameter order to match processBankTransfer function signature
+                // processBankTransfer(userId, amountFiat, fiatCurrency, accountNumber, bankName, paymentDescription)
                 withdrawalResult = await paymentGatewayService.processBankTransfer(
-                    details.accountNumber,
-                    details.bankName,
-                    amountFiat,
-                    fiatCurrency,
-                    details.paymentDescription
+                    userId,                        // userId (1st parameter)
+                    amountFiat,                    // amountFiat (2nd parameter)
+                    fiatCurrency,                  // fiatCurrency (3rd parameter)
+                    details.accountNumber,         // accountNumber (4th parameter)
+                    details.bankName,              // bankName (5th parameter)
+                    details.paymentDescription     // paymentDescription (6th parameter)
                 );
-                transactionDetails.transactionId = withdrawalResult.transactionId;
+                transactionDetails.transactionId = withdrawalResult.transactionId || 'sfasdfda';
                 transactionDetails.status = withdrawalResult.status;
                 transactionDetails.details.accountNumber = details.accountNumber;
                 transactionDetails.details.bankName = details.bankName;

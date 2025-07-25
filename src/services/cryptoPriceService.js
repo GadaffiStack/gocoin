@@ -130,3 +130,71 @@ exports.getExchangeRate = async (fromCurrency, toCurrency) => {
         throw new Error('Failed to fetch exchange rate. Please try again later.');
     }
 };
+
+
+
+exports.convertGoTokenToFiat = async (goTokenAmount, fiatCurrency = 'USD') => {
+    try {
+        if (goTokenAmount === 0) return 0;
+
+        let fiatRate = 1.0; // Default to 1 if fiatCurrency is USD
+        if (fiatCurrency !== 'USD') {
+            const fiatSlug = fiatCurrency.toLowerCase(); // Adjust based on API requirements
+            const fiatRes = await axios.get(`https://rest.coincap.io/v3/rates/${fiatSlug}`, {
+                  params: {
+                    apiKey: "2897ec445b10a294cd9458a03c5077ec1d5758da05f11d5ec02246a18c78594f"
+                }
+        });
+        
+            fiatRate = parseFloat(fiatRes.data.data?.rateUsd) || 1.0;
+            if (!fiatRate) {
+                throw new Error(`Rate not found for ${fiatCurrency}`);
+            }
+        }
+
+        // Convert GoToken to USD and then to the requested fiat currency
+        const usdValue = goTokenAmount * goTokenRateUsd;
+        const fiatValue = usdValue / fiatRate;
+        return fiatValue;
+    } catch (error) {
+        console.error('[CryptoPriceService] Error converting GoToken to Fiat:', error.message);
+        if (error.response) {
+            console.error('[CryptoPriceService] API Error Response:', error.response.data);
+        }
+        throw new Error('Failed to convert GoToken to fiat. Please try again later.');
+    }
+};
+
+
+
+
+exports.convertFiatToGoToken = async (amountFiat, fiatCurrency = 'USD') => {
+    try {
+        if (amountFiat === 0) return 0;
+
+        let fiatRate = 1.0; // Default to 1 if fiatCurrency is USD
+        if (fiatCurrency !== 'USD') {
+            const fiatSlug = fiatCurrency.toLowerCase(); // Adjust based on API requirements
+            const fiatRes = await axios.get(`https://rest.coincap.io/v3/rates/${fiatSlug}`, {
+                 params: {
+                    apiKey: "2897ec445b10a294cd9458a03c5077ec1d5758da05f11d5ec02246a18c78594f"
+                }
+        });
+            fiatRate = parseFloat(fiatRes.data.data?.rateUsd) || 1.0;
+            if (!fiatRate) {
+                throw new Error(`Rate not found for ${fiatCurrency}`);
+            }
+        }
+
+        // Convert fiat to USD and then to GoToken
+        const usdValue = amountFiat * fiatRate;
+        const goTokenAmount = usdValue / goTokenRateUsd;
+        return goTokenAmount;
+    } catch (error) {
+        console.error('[CryptoPriceService] Error converting Fiat to GoToken:', error.message);
+        if (error.response) {
+            console.error('[CryptoPriceService] API Error Response:', error.response.data);
+        }
+        throw new Error('Failed to convert fiat to GoToken. Please try again later.');
+    }
+};

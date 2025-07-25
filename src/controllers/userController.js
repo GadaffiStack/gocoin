@@ -38,17 +38,18 @@ exports.updateInterests = catchAsync(async (req, res, next) => {
     res.status(200).json({
         status: 'success',
         message: 'Interests updated successfully.',
-        interests: updatedUser.interests
+        interests: updatedUser
     });
 });
 
 exports.updateLocation = catchAsync(async (req, res, next) => {
     const { country, stateRegion, userId } = req.body;
-    await userService.updateUserLocation(userId, country, stateRegion);
+    const updatedUser = await userService.updateUserLocation(userId, country, stateRegion);
 
     res.status(200).json({
         status: 'success',
-        message: 'Location updated successfully.'
+        message: 'Location updated successfully.',
+        user: updatedUser // Return full updated user
     });
 });
 

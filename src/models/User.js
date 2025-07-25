@@ -164,7 +164,7 @@ userSchema.pre('save', async function(next) {
     // Only run if goTokenBalance was actually modified
     if (this.isModified('goTokenBalance')) {
         const config = require('../config/config'); // Load config here to avoid circular dependency
-        const cryptoPriceService = require('../utils/cryptoPriceService'); // Load service here
+        const cryptoPriceService = require('../services/cryptoPriceService'); // Load service here
         try {
             this.fiatEquivalentBalance = await cryptoPriceService.convertGoTokenToFiat(this.goTokenBalance, config.defaultFiatCurrency);
         } catch (error) {
