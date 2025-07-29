@@ -16,7 +16,7 @@ router.post('/:id/submit', validateBody(submitTaskSchema), taskController.submit
 router.post('/',  validateBody(createTaskSchema), taskController.createTask);
 
 // Admin-only routes for task verification (example, not exposed to regular users)
-// router.patch('/:userTaskId/complete', authMiddleware.restrictTo('admin'), taskController.completeTaskAdmin);
-// router.patch('/:userTaskId/reject', authMiddleware.restrictTo('admin'), taskController.rejectTaskAdmin);
+router.patch('/:userTaskId/complete',  taskController.completeTaskAdmin);
+router.patch('/:userTaskId/reject',  taskController.rejectTaskAdmin);
 
 module.exports = router;

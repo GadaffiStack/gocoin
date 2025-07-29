@@ -154,7 +154,7 @@ exports.createPaymentLink = catchAsync(async (req, res, next) => {
                 name: paymentLink.name,
                 linkCode: paymentLink.linkCode,
                 // In a real app, you'd construct the full URL here based on frontend domain
-                fullUrl: `https://your-app-domain.com/pay/${paymentLink.linkCode}`
+                fullUrl: `https://go-coin.vercel.app/pay/${paymentLink.linkCode}`
             }
         }
     });

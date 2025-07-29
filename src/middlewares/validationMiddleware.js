@@ -226,25 +226,29 @@ exports.sendBankTransferSchema = Joi.object({
 }).or('amountGoToken', 'amountFiat');
 
 exports.addBeneficiarySchema = Joi.object({
-    name: Joi.string().required(),
-    type: Joi.string().valid('bank', 'mobile_money', 'crypto').required(),
-    details: Joi.object().when('type', {
-        is: 'bank',
-        then: Joi.object({
-            accountNumber: Joi.string().required(),
-            bankName: Joi.string().required()
-        }).required(),
-        is: 'mobile_money',
-        then: Joi.object({
-            mobileNumber: Joi.string().required(),
-            network: Joi.string().required()
-        }).required(),
-        is: 'crypto',
-        then: Joi.object({
-            walletAddress: Joi.string().required(),
-            cryptoType: Joi.string().required()
-        }).required(),
-        otherwise: Joi.forbidden()
+  name: Joi.string().required(),
+  type: Joi.string().valid('bank', 'mobile_money', 'crypto').required(),
+  details: Joi.alternatives()
+    .conditional('type', {
+      is: 'bank',
+      then: Joi.object({
+        accountNumber: Joi.string().required(),
+        bankName: Joi.string().required()
+      }).required()
+    })
+    .conditional('type', {
+      is: 'mobile_money',
+      then: Joi.object({
+        mobileNumber: Joi.string().required(),
+        network: Joi.string().required()
+      }).required()
+    })
+    .conditional('type', {
+      is: 'crypto',
+      then: Joi.object({
+        walletAddress: Joi.string().required(),
+        cryptoType: Joi.string().required()
+      }).required()
     })
 });
 

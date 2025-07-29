@@ -325,6 +325,24 @@ exports.sendFunds = async (userId, sendType, details, password) => {
                 transactionDetails.details.toWalletAddress = details.toWalletAddress;
                 transactionDetails.details.cryptoType = details.cryptoType || 'BTC';
                 break;
+            case 'scan_to_pay':
+                    transactionType = 'scan_to_pay';
+                    
+                    // Lookup merchant or recipient from QR code data
+                    const merchant = await User.findOne({ qrCodeId: details.qrCodeData }).session(session);
+                    if (!merchant) {
+                        throw new AppError('Merchant not found for this QR code.', 404);
+                    }
+
+                    // Credit merchant's wallet
+                    merchant.goTokenBalance += amountGoToken;
+                    await merchant.save({ session });
+
+                    transactionDetails.transactionId = `SCAN_${Date.now()}_${userId}`;
+                    transactionDetails.status = 'completed';
+                    transactionDetails.details.recipientId = merchant._id;
+                    transactionDetails.details.qrCodeData = details.qrCodeData;
+                    break;
 
             case 'bank_transfer':
                 transactionType = 'bank_transfer_send';

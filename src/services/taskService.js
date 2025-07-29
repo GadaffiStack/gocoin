@@ -103,7 +103,7 @@ exports.submitTask = async (userId, taskId, submissionData) => {
         { taskId: task._id, taskTopic: task.campaignTopic, status: 'under_review' }
     );
 
-    return { message: 'Task submitted successfully and is awaiting review.' };
+    return { message: task };
 };
 
 // This function would typically be called by an ADMIN or a background worker after verification.
@@ -208,4 +208,27 @@ exports.getUserActivity = async (userId, filter, options) => {
 exports.createTask = async (taskData) => {
     const task = await Task.create(taskData);
     return task;
+};
+
+
+exports.reviewSubmittedTask = async (req, res, next) => {
+    const { action, reason } = req.body;
+    const { userTaskId } = req.params;
+
+    if (!['approve', 'reject'].includes(action)) {
+        return next(new AppError('Invalid review action. Use "approve" or "reject".', 400));
+    }
+
+    let result;
+    if (action === 'approve') {
+        result = await taskService.completeTask(userTaskId);
+    } else {
+        result = await taskService.rejectTask(userTaskId, reason);
+    }
+
+    res.status(200).json({
+        status: 'success',
+        message: `Task ${action}ed successfully.`,
+        data: result || null
+    });
 };

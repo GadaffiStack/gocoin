@@ -12,6 +12,13 @@ const {
 
 const router = express.Router();
 
+const sendScanToPaySchema = Joi.object({
+  qrCodeData: Joi.string().required(),
+  amountGoToken: Joi.number().positive().required(),
+  paymentDescription: Joi.string().optional(),
+  password: Joi.string().required()
+});
+
 router.use(authMiddleware.protect); // All routes after this are protected
 
 router.get('/balance', walletController.getWalletBalance);
@@ -29,8 +36,12 @@ router.post('/withdraw/mobile-money', validateBody(withdrawMobileMoneySchema), w
 router.post('/send/crypto', validateBody(sendCryptoSchema), walletController.sendCrypto);
 router.post('/send/mobile-money', validateBody(sendMobileMoneySchema), walletController.sendMobileMoney);
 router.post('/send/bank-transfer', validateBody(sendBankTransferSchema), walletController.sendBankTransfer);
-router.post('/send/scan-to-pay', validateBody({ qrCodeData: Joi.string().required(), amountGoToken: Joi.number().positive().required(), paymentDescription: Joi.string().optional(), password: Joi.string().required() }), walletController.sendScanToPay);
 
+router.post(
+  '/send/scan-to-pay',
+  validateBody(sendScanToPaySchema),
+  walletController.sendScanToPay
+);
 // Beneficiaries
 router.post('/beneficiaries', validateBody(addBeneficiarySchema), walletController.addBeneficiary);
 router.get('/beneficiaries', walletController.getBeneficiaries);
