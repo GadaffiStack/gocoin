@@ -282,7 +282,15 @@ async function getExchangeRateToNgn(currency) {
 }
 
 
-exports.processMobileMoneyTransfer = async (userId, amountFiat, fiatCurrency, mobileNumber, network, paymentDescription, name) => {
+exports.processMobileMoneyTransfer = async ({
+    userId,
+    amountFiat,
+    fiatCurrency,
+    mobileNumber,
+    network,
+    paymentDescription,
+    name
+}) => {
     try {
         console.log('[PaymentGatewayService] Starting mobile money transfer process at', new Date().toISOString(), ':', {
             userId,
@@ -295,9 +303,6 @@ exports.processMobileMoneyTransfer = async (userId, amountFiat, fiatCurrency, mo
         });
 
         // Validate inputs
-        if (!mobileNumber || !/^\+\d{9,14}$/.test(mobileNumber)) {
-            throw new Error('Invalid mobile number. Must be in international format (e.g., +233XXXXXXXXX).');
-        }
         if (!network || typeof network !== 'string') {
             throw new Error('Invalid network. Must be a non-empty string.');
         }
@@ -306,6 +311,9 @@ exports.processMobileMoneyTransfer = async (userId, amountFiat, fiatCurrency, mo
         }
         if (!fiatCurrency || typeof fiatCurrency !== 'string') {
             throw new Error('Invalid fiatCurrency. Must be a non-empty string.');
+        }
+        if (!mobileNumber || !/^\+?\d{9,14}$/.test(mobileNumber)) {
+            throw new Error('Invalid mobile number. Must be in international format (e.g., +233XXXXXXXXX).');
         }
         if (!name || typeof name !== 'string') {
             throw new Error('Invalid name. Must be a non-empty string.');
@@ -320,7 +328,7 @@ exports.processMobileMoneyTransfer = async (userId, amountFiat, fiatCurrency, mo
         if (currency !== 'GHS' && currency !== 'KES') {
             const conversionRate = await getExchangeRateToMobileCurrency(currency);
             transferAmount = transferAmount * conversionRate;
-            targetCurrency = network === 'M-Pesa' ? 'KES' : 'GHS'; // Default to GHS for MTN, KES for M-Pesa
+            targetCurrency = network === 'M-Pesa' ? 'KES' : 'GHS'; // Default fallback
             console.log('[PaymentGatewayService] Converted to mobile currency:', { conversionRate, transferAmount, targetCurrency });
         }
 
@@ -333,7 +341,7 @@ exports.processMobileMoneyTransfer = async (userId, amountFiat, fiatCurrency, mo
         const payload = {
             source: 'balance',
             reason: paymentDescription || 'Mobile money withdrawal',
-            amount: Math.round(transferAmount * 100), // Convert to smallest unit (e.g., pesewas for GHS, cents for KES)
+            amount: Math.round(transferAmount * 100),
             reference: transferReference,
             recipient: recipientCode,
             currency: targetCurrency
@@ -346,6 +354,7 @@ exports.processMobileMoneyTransfer = async (userId, amountFiat, fiatCurrency, mo
                 'Content-Type': 'application/json'
             }
         });
+
         console.log('[PaymentGatewayService] Paystack API response:', response.data);
 
         if (response.data.status) {

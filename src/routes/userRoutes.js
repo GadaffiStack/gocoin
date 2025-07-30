@@ -12,7 +12,7 @@ const router = express.Router();
 
 // router.use(authMiddleware.protect); // All routes after this are protected
 
-router.get('/me', userController.getMe);
+router.get('/me', authMiddleware.protect,  userController.getMe);
 router.put('/me/interests', validateBody(updateInterestsSchema), userController.updateInterests);
 router.put('/me/location', validateBody(updateLocationSchema), userController.updateLocation);
 router.post('/me/connect-wallet', validateBody(connectWalletSchema), userController.connectWallet);

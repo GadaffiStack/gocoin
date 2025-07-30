@@ -118,7 +118,9 @@ exports.swapCurrencies = async (userId, fromCurrency, fromAmount, toCurrency) =>
 };
 
 exports.withdrawFunds = async (userId, withdrawalType, details, password) => {
-    console.log(' i am the details', details);
+  const { mobileNumber, network, amountGoToken, amountFiat, fiatCurrency, paymentDescription } = details;
+
+  console.log('i am the', mobileNumber, network, amountGoToken, amountFiat, fiatCurrency, password);
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -216,13 +218,17 @@ exports.withdrawFunds = async (userId, withdrawalType, details, password) => {
 
             case 'mobile_money':
                 transactionType = 'mobile_money_withdraw';
-                withdrawalResult = await paymentGatewayService.processMobileMoneyTransfer(
-                    details.mobileNumber,
-                    details.network,
-                    amountFiat,
-                    fiatCurrency,
-                    details.paymentDescription
-                );
+
+                withdrawalResult = await paymentGatewayService.processMobileMoneyTransfer({
+                    userId: userId, // Add this if you have access to it in scope
+                    amountFiat: amountFiat,
+                    fiatCurrency: fiatCurrency,
+                    mobileNumber: details.mobileNumber,
+                    network: details.network || 'MTN', // default fallback
+                    paymentDescription: paymentDescription || 'Mobile money withdrawal',
+                    name: 'sim' // Ensure 'name' is included in `details`
+                });
+
                 transactionDetails.transactionId = withdrawalResult.transactionId;
                 transactionDetails.status = withdrawalResult.status;
                 transactionDetails.details.mobileNumber = details.mobileNumber;

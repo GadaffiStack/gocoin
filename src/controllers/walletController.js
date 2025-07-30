@@ -66,8 +66,15 @@ exports.withdrawBank = catchAsync(async (req, res, next) => {
 });
 
 exports.withdrawMobileMoney = catchAsync(async (req, res, next) => {
+    // console.log('i am the request body', req.body);
     const { mobileNumber, network, amountGoToken, amountFiat, fiatCurrency, password } = req.body;
-    const transaction = await walletService.withdrawFunds(req.user._id, 'mobile_money', { mobileNumber, network, amountGoToken, amountFiat, fiatCurrency }, password);
+
+    const transaction = await walletService.withdrawFunds(
+        req.user._id,
+        'mobile_money',
+        { mobileNumber, network, amountGoToken, amountFiat, fiatCurrency },
+        password
+    );
 
     res.status(200).json({
         status: 'success',
