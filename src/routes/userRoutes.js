@@ -32,14 +32,14 @@ router.delete('/me/connected-wallets/:walletId', validateParams(Joi.object({ wal
 router.put('/me/password', validateBody(changePasswordSchema), userController.changePassword);
 
 // NEW: Notification Settings
-router.put('/me/notification-settings', validateBody(notificationSettingsSchema), userController.updateNotificationSettings);
+router.put('/me/notification-settings', authMiddleware.protect, validateBody(notificationSettingsSchema), userController.updateNotificationSettings);
 
 // NEW: Privacy Settings
-router.put('/me/privacy-settings', validateBody(privacySettingsSchema), userController.updatePrivacySettings);
+router.put('/me/privacy-settings', authMiddleware.protect, validateBody(privacySettingsSchema), userController.updatePrivacySettings);
 
 
 // Fetch interests by userId
-router.post('/me/interests/fetch', userController.getUserInterests);
+router.post('/me/interests/fetch', authMiddleware.protect, userController.getUserInterests);
 router.post('/logout', userController.logout);
 
 module.exports = router;
