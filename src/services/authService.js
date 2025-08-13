@@ -126,15 +126,15 @@ exports.forgotPassword = async (email) => {
         return;
     }
 
-    // Generate reset token
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    // Generate a 6-digit numeric reset token (as string)
+    const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
+    user.resetPasswordToken = resetToken; // Store plain 6-digit token
     user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1 hour
     await user.save({ validateBeforeSave: false });
 
-    const resetURL = `${config.frontendURL}/reset-password/${resetToken}`;
-    console.log('the reset URL:', resetURL);
-    await emailService.sendPasswordResetEmail(user.email, resetURL);
+    // Send the 5-digit token directly
+    console.log('the reset token:', resetToken);
+    await emailService.sendPasswordResetEmail(user.email, resetToken);
 };
 
 exports.resetPassword = async (token, newPassword) => {
@@ -177,18 +177,18 @@ exports.resendOtp = async (email) => {
 };
 
 exports.resetPasswordWithOtp = async (email, otp, newPassword) => {
-    const user = await User.findOne({ email });
+    // Find user by email and check reset token and expiry
+    const user = await User.findOne({
+        email,
+        resetPasswordToken: otp,
+        resetPasswordExpires: { $gt: Date.now() }
+    }).select('+password');
     if (!user) {
-        throw new AppError('User not found.', 404);
-    }
-    // Verify OTP
-    const isValid = await otpService.verifyOtp(user._id, otp);
-    if (!isValid) {
-        throw new AppError('Invalid or expired OTP.', 400);
+        throw new AppError('Invalid or expired password reset token.', 400);
     }
     user.password = newPassword; // Let Mongoose pre-save hook hash it
-    user.otp = undefined;
-    user.otpExpires = undefined;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
     await user.save();
 };
 

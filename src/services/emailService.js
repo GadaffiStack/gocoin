@@ -32,16 +32,16 @@ exports.sendConfirmationEmail = async (email, otp) => {
 };
 
 // Send password reset email with reset link
-exports.sendPasswordResetEmail = async (email, resetURL) => {
+exports.sendPasswordResetEmail = async (email, resetToken) => {
     const mailOptions = {
         from: `"GoToken" <${config.email.user}>`,
         to: email,
         subject: 'Reset Your Password',
         html: `
             <h1>Password Reset Request</h1>
-            <p>You requested to reset your password. Click the link below to reset it:</p>
-            <a href="${resetURL}" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px;">Reset Password</a>
-            <p>This link will expire in 1 hour.</p>
+            <p>You requested to reset your password. Use the token below to reset it in the app or website:</p>
+            <h2>${resetToken}</h2>
+            <p>This token will expire in 1 hour.</p>
             <p>If you didn't request this, please ignore this email and your password will remain unchanged.</p>
         `
     };
