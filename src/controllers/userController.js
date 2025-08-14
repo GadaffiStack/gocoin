@@ -1,3 +1,93 @@
+
+exports.updateCountry = async (req, res, next) => {
+    const { country } = req.body;
+    const user = await userService.updateUserProfile(req.user._id, { country });
+    res.status(200).json({ status: 'success', message: 'Country updated successfully.', user: user.user });
+};
+
+exports.updateState = async (req, res, next) => {
+    const { state } = req.body;
+    const user = await userService.updateUserProfile(req.user._id, { stateRegion: state });
+    res.status(200).json({ status: 'success', message: 'State updated successfully.', user: user.user });
+};
+
+exports.updateTelegram = async (req, res, next) => {
+    const { telegram } = req.body;
+    const { user: updatedUser } = await userService.updateUserProfile(req.user._id, { telegram });
+    res.status(200).json({
+        status: 'success',
+        message: 'Telegram handle updated successfully.',
+        telegram: updatedUser.telegram, // Now this will work correctly
+        user: updatedUser
+    });
+};
+
+exports.updateX = async (req, res, next) => {
+    const { x } = req.body;
+    const { user: updatedUser } = await userService.updateUserProfile(req.user._id, { x });
+    res.status(200).json({
+        status: 'success',
+        message: 'X handle updated successfully.',
+        x: updatedUser.x, // Now this will work correctly
+        user: updatedUser
+    });
+};
+
+exports.updateInstagram = async (req, res, next) => {
+    const { instagram } = req.body;
+    const { user: updatedUser } = await userService.updateUserProfile(req.user._id, { instagram });
+    res.status(200).json({
+        status: 'success',
+        message: 'Instagram handle updated successfully.',
+        instagram: updatedUser.instagram, // Now this will work correctly
+        user: updatedUser
+    });
+};
+
+exports.updateDiscord = async (req, res, next) => {
+    const { discord } = req.body;
+    const { user: updatedUser } = await userService.updateUserProfile(req.user._id, { discord });
+    res.status(200).json({
+        status: 'success',
+        message: 'Discord handle updated successfully.',
+        discord: updatedUser.discord, // Now this will work correctly
+        user: updatedUser
+    });
+};
+
+exports.updateFacebook = async (req, res, next) => {
+    const { facebook } = req.body;
+    const { user: updatedUser } = await userService.updateUserProfile(req.user._id, { facebook });
+    res.status(200).json({
+        status: 'success',
+        message: 'Facebook handle updated successfully.',
+        facebook: updatedUser.facebook, // Now this will work correctly
+        user: updatedUser
+    });
+};
+
+exports.updatePhoneNumber = async (req, res, next) => {
+    const { phoneNumber } = req.body;
+    const { user: updatedUser } = await userService.updateUserProfile(req.user._id, { phoneNumber });
+    res.status(200).json({
+        status: 'success',
+        message: 'Phone number updated successfully.',
+        phoneNumber: updatedUser.phoneNumber, // Now this will work correctly
+        user: updatedUser
+    });
+};
+
+exports.updatePhoneNumber = async (req, res, next) => {
+    const { phoneNumber } = req.body;
+    const { user: updatedUser } = await userService.updateUserProfile(req.user._id, { phoneNumber });
+    res.status(200).json({
+        status: 'success',
+        message: 'Phone number updated successfully.',
+        phoneNumber: updatedUser.phoneNumber,
+        user: updatedUser
+    });
+};
+
 const catchAsync = require('../utils/catchAsync');
 const userService = require('../services/userService');
 const AppError = require('../utils/AppError');

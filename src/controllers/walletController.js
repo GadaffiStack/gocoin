@@ -20,14 +20,21 @@ exports.getTransactions = catchAsync(async (req, res, next) => {
 
     const { totalTransactions, currentPage, totalPages, transactions } = await walletService.getTransactions(req.user._id, filter, options);
 
+    // Attach amount and method to each transaction
+    const transactionsWithAmountAndMethod = transactions.map(tx => ({
+        ...tx._doc,
+        amount: tx.amountGoToken ?? tx.amountFiat ?? 0,
+        method: tx.method || tx.type || 'unknown'
+    }));
+
     res.status(200).json({
         status: 'success',
-        results: transactions.length,
+        results: transactionsWithAmountAndMethod.length,
         data: {
             totalTransactions,
             currentPage,
             totalPages,
-            transactions
+            transactions: transactionsWithAmountAndMethod
         }
     });
 });

@@ -37,7 +37,6 @@ exports.connectCryptoWallet = async (userId, walletType, address) => {
     return user.connectedWallets;
 };
 
-// NEW: Update user profile (username, email, country, state, avatar)
 exports.updateUserProfile = async (userId, updateFields) => {
     const user = await User.findById(userId).select('+password'); // Select password for potential comparison later if email changes and re-verification is needed
 
@@ -45,7 +44,19 @@ exports.updateUserProfile = async (userId, updateFields) => {
         throw new AppError('User not found.', 404);
     }
 
-    const { username, email, country, stateRegion, avatarUrl } = updateFields;
+    const { 
+        username, 
+        email, 
+        country, 
+        stateRegion, 
+        avatarUrl,
+        telegram,
+        x,
+        instagram,
+        discord,
+        facebook,
+        phoneNumber
+    } = updateFields;
 
     // Check for username uniqueness if changed
     if (username && username !== user.username) {
@@ -72,14 +83,26 @@ exports.updateUserProfile = async (userId, updateFields) => {
         return { user, message: 'Profile updated. Please verify your new email address.' };
     }
 
-    if (country) user.country = country;
-    if (stateRegion) user.stateRegion = stateRegion;
-    if (avatarUrl) user.avatarUrl = avatarUrl; // Assuming avatarUrl is a public URL after upload
+    // Update location fields
+    if (country !== undefined) user.country = country;
+    if (stateRegion !== undefined) user.stateRegion = stateRegion;
+    if (avatarUrl !== undefined) user.avatarUrl = avatarUrl; // Assuming avatarUrl is a public URL after upload
+    
+    // Update social media fields
+    if (telegram !== undefined) user.telegram = telegram;
+    if (x !== undefined) user.x = x;
+    if (instagram !== undefined) user.instagram = instagram;
+    if (discord !== undefined) user.discord = discord;
+    if (facebook !== undefined) user.facebook = facebook;
+    if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
 
     await user.save({ runValidators: true }); // save will trigger pre-save hooks
+    
+    // Remove password from the returned user object
+    user.password = undefined;
+    
     return { user, message: 'Profile updated successfully.' };
 };
-
 // NEW: Remove crypto wallet
 exports.removeCryptoWallet = async (userId, walletId) => {
     const user = await User.findById(userId);

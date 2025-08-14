@@ -1,4 +1,3 @@
-// src/models/User.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs'); // For password hashing and comparison
 
@@ -18,31 +17,30 @@ const userSchema = new mongoose.Schema({
         lowercase: true,
         match: [/^\S+@\S+\.\S+$/, 'Please use a valid email address']
     },
+    // --- Socials & Phone ---
+    telegram: { type: String, trim: true },
+    x: { type: String, trim: true },
+    instagram: { type: String, trim: true },
+    discord: { type: String, trim: true },
+    facebook: { type: String, trim: true },
+    phoneNumber: { type: String, trim: true },
+
     password: {
         type: String,
         required: [true, 'Password is required'],
         minlength: [6, 'Password must be at least 6 characters long'],
-        select: false // Do not return password by default in queries
+        select: false
     },
     emailVerified: {
         type: Boolean,
         default: false
     },
-    otp: { // For email confirmation
-        type: String
-    },
-    otpExpires: {
-        type: Date
-    },
-    resetPasswordToken: {
-        type: String,
-        select: false
-    },
-    resetPasswordExpires: {
-        type: Date,
-        select: false
-    },
-    interests: [{ // From "Select Interest" screen
+    otp: { type: String },
+    otpExpires: { type: Date },
+    resetPasswordToken: { type: String, select: false },
+    resetPasswordExpires: { type: Date, select: false },
+
+    interests: [{
         type: String,
         enum: {
             values: [
@@ -56,56 +54,30 @@ const userSchema = new mongoose.Schema({
             message: '"{VALUE}" is not a valid interest type.'
         }
     }],
-    country: { // From "Set Location" screen
-        type: String,
-        trim: true
-    },
-    stateRegion: { // From "Set Location" screen
-        type: String,
-        trim: true
-    },
-    connectedWallets: [{ // From "Connect Crypto Wallet" screen & "Manage Wallet"
-        walletType: { // e.g., 'Coinbase', 'Metamask', 'Phantom', 'Trust Wallet', 'Solflare', 'Rainbow'
-            type: String,
-            required: [true, 'Wallet type is required']
-        },
-        address: { // The connected wallet address
-            type: String,
-            required: [true, 'Wallet address is required']
-        },
-        // Mongoose automatically adds an _id to subdocuments, which we'll use for removal
+    country: { type: String, trim: true },
+    stateRegion: { type: String, trim: true },
+
+    connectedWallets: [{
+        walletType: { type: String, required: [true, 'Wallet type is required'] },
+        address: { type: String, required: [true, 'Wallet address is required'] }
     }],
-    goTokenBalance: { // User's main balance in GoTokens
-        type: Number,
-        default: 0,
-        min: [0, 'Balance cannot be negative']
-    },
-    fiatEquivalentBalance: { // Cached fiat equivalent for display, e.g., USD
-        type: Number,
-        default: 0,
-        min: [0, 'Balance cannot be negative']
-    },
-    referralCode: { // Unique code generated for the user
+
+    goTokenBalance: { type: Number, default: 0, min: [0, 'Balance cannot be negative'] },
+    fiatEquivalentBalance: { type: Number, default: 0, min: [0, 'Balance cannot be negative'] },
+
+    referralCode: {
         type: String,
         unique: true,
-        sparse: true, // Allows nulls while enforcing uniqueness for non-null values
+        sparse: true,
         trim: true,
         uppercase: true,
         minlength: [8, 'Referral code must be at least 8 characters']
     },
-    referredBy: { // User ID of the referrer
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-    },
-    referralCount: {
-        type: Number,
-        default: 0
-    },
-    bonusEarned: {
-        type: Number,
-        default: 0
-    },
-    status: { // For general user status or for leaderboard active/inactive display
+    referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    referralCount: { type: Number, default: 0 },
+    bonusEarned: { type: Number, default: 0 },
+
+    status: {
         type: String,
         enum: {
             values: ['active', 'inactive'],
@@ -113,78 +85,71 @@ const userSchema = new mongoose.Schema({
         },
         default: 'active'
     },
-    lastLogin: {
-        type: Date,
-        default: Date.now
-    },
-    avatarUrl: { // For 'Edit profile image'
+
+    lastLogin: { type: Date, default: Date.now },
+
+    avatarUrl: {
         type: String,
-        default: 'https://res.cloudinary.com/your-cloud-name/image/upload/v1709280000/default-avatar.png' // Provide a sensible default URL
+        default: 'https://res.cloudinary.com/your-cloud-name/image/upload/v1709280000/default-avatar.png'
     },
-    notificationPreferences: { // For Notification settings
+
+    notificationPreferences: {
         emailNotifications: { type: Boolean, default: true },
-        smsNotifications: { type: Boolean, default: false }, // Placeholder for SMS
+        smsNotifications: { type: Boolean, default: false },
         newTaskAlerts: { type: Boolean, default: true },
         taskReminders: { type: Boolean, default: true },
         earningsAlerts: { type: Boolean, default: true }
     },
-    privacySettings: { // For Privacy settings
-        activityVisibility: { type: Boolean, default: true }, // Enable others to see activities on leaderboard
-        dataSharing: { type: Boolean, default: false } // Grant GoToken permission to share data
+
+    privacySettings: {
+        activityVisibility: { type: Boolean, default: true },
+        dataSharing: { type: Boolean, default: false }
     },
-    bankReceiveDetails: { // For 'Receive payments' via bank account (simplified for one account)
+
+    bankReceiveDetails: {
         bankName: { type: String, trim: true },
         accountNumber: { type: String, trim: true },
         accountName: { type: String, trim: true }
     },
-    passwordChangedAt: Date // To handle JWT invalidation if password changes
-}, { timestamps: true }); // Mongoose adds createdAt and updatedAt fields
 
-// --- Mongoose Hooks and Methods ---
+    passwordChangedAt: Date
 
-// Pre-save hook to hash password if it's modified
+}, { timestamps: true });
+
+// --- Hooks ---
 userSchema.pre('save', async function(next) {
-    // Only run this function if password was actually modified
     if (!this.isModified('password')) return next();
-
-    // Hash the password with cost of 12
     this.password = await bcrypt.hash(this.password, 12);
     next();
 });
 
-// Pre-save hook to update passwordChangedAt property
 userSchema.pre('save', function(next) {
     if (!this.isModified('password') || this.isNew) return next();
-    this.passwordChangedAt = Date.now() - 1000; // Subtract 1s to ensure token is issued after password change
+    this.passwordChangedAt = Date.now() - 1000;
     next();
 });
 
-// Pre-save hook to update fiatEquivalentBalance based on goTokenBalance
 userSchema.pre('save', async function(next) {
-    // Only run if goTokenBalance was actually modified
     if (this.isModified('goTokenBalance')) {
-        const config = require('../config/config'); // Load config here to avoid circular dependency
-        const cryptoPriceService = require('../services/cryptoPriceService'); // Load service here
+        const config = require('../config/config');
+        const cryptoPriceService = require('../services/cryptoPriceService');
         try {
-            this.fiatEquivalentBalance = await cryptoPriceService.convertGoTokenToFiat(this.goTokenBalance, config.defaultFiatCurrency);
+            this.fiatEquivalentBalance = await cryptoPriceService.convertGoTokenToFiat(
+                this.goTokenBalance,
+                config.defaultFiatCurrency
+            );
         } catch (error) {
             console.error('Error converting GoToken to Fiat during pre-save:', error.message);
-            // Decide how to handle this error:
-            // 1. Throw error (prevents save)
-            // 2. Log and continue with old fiat balance (less accurate, but allows save)
-            // For now, we'll log and continue. The balance might be slightly off until next update.
         }
     }
     next();
 });
 
-
-// Instance method to compare passwords
+// --- Methods ---
 userSchema.methods.correctPassword = async function(candidatePassword, userPassword) {
     return await bcrypt.compare(candidatePassword, userPassword);
 };
 
-// Optional: Method to check if user changed password after token was issued (for JWT security)
 userSchema.methods.changedPasswordAfter = function(JWTTimestamp) {
     if (this.passwordChangedAt) {
         const changedTimestamp = parseInt(this.passwordChangedAt.getTime() / 1000, 10);
