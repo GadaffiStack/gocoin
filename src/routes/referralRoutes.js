@@ -1,6 +1,6 @@
 // src/routes/referralRoutes.js
 const express = require('express');
-const referralController = require('../controllers/referallController');
+const referralController = require('../controllers/referralController');
 const authMiddleware = require('../middlewares/authMiddlewares');
 
 const router = express.Router();

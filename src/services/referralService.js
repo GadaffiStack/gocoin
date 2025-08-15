@@ -7,18 +7,47 @@ const config = require('../config/config');
 
 exports.getReferralInfo = async (userId) => {
     const user = await User.findById(userId);
-    if (!user) {
-        throw new AppError('User not found.', 404);
-    }
+    if (!user) throw new AppError('User not found.', 404);
 
-    // Count successful referrals (those who joined and completed a task, or simply signed up and verified email)
-    const referredUsersCount = await User.countDocuments({ referredBy: userId });
+    // Total invites = all referred users
+    const totalInvites = await User.countDocuments({ referredBy: userId });
 
-    // Calculate total earnings from referrals
-    const referralEarningsTransactions = await Transaction.aggregate([
+    // Conversions = referred users who verified email
+    const conversions = await User.countDocuments({
+        referredBy: userId,
+        emailVerified: true
+    });
+
+    // Pending bonus = referral bonuses with 'pending' status
+    const pendingBonusTx = await Transaction.aggregate([
         {
             $match: {
-                userId: userId,
+                userId,
+                type: 'referral_bonus',
+                status: 'pending'
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                totalGoToken: { $sum: '$amountGoToken' },
+                totalFiat: { $sum: '$amountFiat' }
+            }
+        }
+    ]);
+
+    const pendingBonus = pendingBonusTx.length > 0
+        ? {
+            goToken: pendingBonusTx[0].totalGoToken || 0,
+            fiat: pendingBonusTx[0].totalFiat || 0
+        }
+        : { goToken: 0, fiat: 0 };
+
+    // Completed earnings
+    const referralEarningsTx = await Transaction.aggregate([
+        {
+            $match: {
+                userId,
                 type: 'referral_bonus',
                 status: 'completed'
             }
@@ -27,37 +56,39 @@ exports.getReferralInfo = async (userId) => {
             $group: {
                 _id: null,
                 totalGoTokenEarnings: { $sum: '$amountGoToken' },
-                totalFiatEarnings: { $sum: '$amountFiat' } // Assumes fiat equivalent was stored
+                totalFiatEarnings: { $sum: '$amountFiat' }
             }
         }
     ]);
 
-    const totalReferralEarningsGoToken = referralEarningsTransactions.length > 0 ? referralEarningsTransactions[0].totalGoTokenEarnings : 0;
-    const totalReferralEarningsFiat = referralEarningsTransactions.length > 0 ? referralEarningsTransactions[0].totalFiatEarnings : 0;
+    const totalReferralEarningsGoToken =
+        referralEarningsTx.length > 0 ? referralEarningsTx[0].totalGoTokenEarnings : 0;
+    const totalReferralEarningsFiat =
+        referralEarningsTx.length > 0 ? referralEarningsTx[0].totalFiatEarnings : 0;
 
-
-    // Get details of referred friends (can be filtered by status or limited for performance)
-    // For simplicity, only returning a count and total earnings for now.
-    // If client needs detailed list:
+    // Referred friends details
     const referredFriendsList = await User.find({ referredBy: userId })
-        .select('username email createdAt emailVerified') // Select only relevant fields
-        .limit(10); // Limit for performance if many referrals
+        .select('username email createdAt emailVerified')
+        .limit(10);
 
-    // Map the status for referred friends
     const formattedReferredFriends = referredFriendsList.map(friend => ({
         username: friend.username,
         status: friend.emailVerified ? 'joined_verified' : 'joined_pending_verification',
-        date: friend.createdAt.toISOString().split('T')[0] // Format date
+        date: friend.createdAt.toISOString().split('T')[0]
     }));
-
 
     return {
         referralCode: user.referralCode,
         earningsPerReferral: config.referralBonusGoToken,
-        totalReferrals: referredUsersCount,
-        successfulReferrals: referralEarningsTransactions.length > 0 ? referralEarningsTransactions[0].totalGoTokenEarnings / config.referralBonusGoToken : 0, // Simplified, assuming each bonus is the fixed amount
-        totalReferralEarningsGoToken: totalReferralEarningsGoToken,
-        totalReferralEarningsFiat: totalReferralEarningsFiat,
-        referredFriends: formattedReferredFriends // Return formatted list
+        totalInvites,
+        conversions,
+        pendingBonus,
+        successfulReferrals:
+            referralEarningsTx.length > 0
+                ? referralEarningsTx[0].totalGoTokenEarnings / config.referralBonusGoToken
+                : 0,
+        totalReferralEarningsGoToken,
+        totalReferralEarningsFiat,
+        referredFriends: formattedReferredFriends
     };
 };
