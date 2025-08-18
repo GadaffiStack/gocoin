@@ -10,7 +10,9 @@ const notificationService = require('./notificationService');
 const config = require('../config/config');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const axios = require('axios'); // For API calls
+const axios = require('axios'); 
+const Wallet = require("../models/Wallet");
+
 
 exports.getWalletBalance = async (userId) => {
     const user = await User.findById(userId);
@@ -565,4 +567,11 @@ exports.removeWallet = async (userId, walletAddress) => {
     removedWallet,
     connectedWallets: user.connectedWallets
   };
+};
+
+
+exports.getUserWallets = async (userId) => {
+  const user = await User.findById(userId);
+  if (!user) throw new AppError('User not found.', 404);
+  return user.connectedWallets || [];
 };

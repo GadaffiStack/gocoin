@@ -2,6 +2,7 @@
 const catchAsync = require('../utils/catchAsync');
 const walletService = require('../services/walletService');
 const AppError = require('../utils/AppError');
+// const walletService = require("../services/walletService");
 
 exports.getWalletBalance = catchAsync(async (req, res, next) => {
     const balance = await walletService.getWalletBalance(req.user._id);
@@ -209,5 +210,18 @@ exports.removeWallet = async (req, res, next) => {
   res.status(200).json({
     status: 'success',
     data: result
+  });
+};
+
+
+
+
+exports.getWallets = async (req, res, next) => {
+  const wallets = await walletService.getUserWallets(req.user._id);
+
+  res.status(200).json({
+    status: "success",
+    results: wallets.length,
+    data: wallets,
   });
 };

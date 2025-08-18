@@ -55,4 +55,6 @@ router.post('/add-wallet', walletController.addWallet);
 
 router.delete('/remove-wallet', walletController.removeWallet);
 
+router.get("/get-wallet", authMiddleware.protect, walletController.getWallets);
+
 module.exports = router;
