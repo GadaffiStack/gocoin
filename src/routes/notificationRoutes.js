@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.use(authMiddleware.protect); // All routes after this are protected
 
-router.get('/', validateQuery(getNotificationsSchema), notificationController.getNotifications);
+router.get('/all-notification', validateQuery(getNotificationsSchema), notificationController.getNotifications);
 router.patch('/:id/read', notificationController.markNotificationAsRead); // PATCH for partial update
 router.patch('/mark-all-read', notificationController.markAllNotificationsAsRead);
 
