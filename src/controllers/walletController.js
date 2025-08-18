@@ -191,3 +191,23 @@ exports.saveBankDetailsForReceiving = catchAsync(async (req, res, next) => {
         message: message
     });
 });
+
+exports.addWallet = async (req, res, next) => {
+  const result = await walletService.addWallet(req.user._id, req.body);
+
+  res.status(201).json({
+    status: 'success',
+    data: result
+  });
+};
+
+exports.removeWallet = async (req, res, next) => {
+  const { address } = req.body; 
+
+  const result = await walletService.removeWallet(req.user._id, address);
+
+  res.status(200).json({
+    status: 'success',
+    data: result
+  });
+};

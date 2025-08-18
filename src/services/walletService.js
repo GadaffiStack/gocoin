@@ -476,3 +476,93 @@ exports.saveBankDetailsForReceiving = async (userId, bankName, accountNumber, ac
 
     return 'Bank details saved successfully for receiving payments.';
 };
+
+
+
+const WALLET_BONUS = 10; // 🎁 GoCoins to reward for connecting wallet
+
+exports.addWallet = async (userId, walletData) => {
+  const { walletType, address } = walletData;
+
+  if (!walletType || !address) {
+    throw new AppError('Wallet type and address are required.', 400);
+  }
+
+  const user = await User.findById(userId);
+  if (!user) throw new AppError('User not found.', 404);
+
+  // prevent duplicate wallet
+  const alreadyExists = user.connectedWallets.some(
+    (w) => w.address.toLowerCase() === address.toLowerCase()
+  );
+  if (alreadyExists) {
+    throw new AppError('This wallet is already connected.', 400);
+  }
+
+  // add wallet
+  user.connectedWallets.push({ walletType, address });
+
+  // allocate bonus
+  user.goTokenBalance += WALLET_BONUS;
+
+  // convert to fiat equivalent
+  const fiatEquivalent = await cryptoPriceService.convertGoTokenToFiat(
+    WALLET_BONUS,
+    config.defaultFiatCurrency
+  );
+  user.fiatEquivalentBalance += fiatEquivalent;
+
+  await user.save();
+
+  // log transaction
+  await Transaction.create({
+    userId: user._id,
+    type: 'received',
+    amountGoToken: WALLET_BONUS,
+    amountFiat: fiatEquivalent,
+    fiatCurrency: config.defaultFiatCurrency,
+    status: 'completed',
+    details: {
+      toWalletAddress: address,
+      cryptoType: 'GoToken',
+      paymentDescription: 'Bonus for connecting wallet'
+    }
+  });
+
+  return {
+    message: 'Wallet added and GoCoin bonus allocated successfully.',
+    connectedWallets: user.connectedWallets,
+    goTokenBalance: user.goTokenBalance,
+    fiatEquivalentBalance: user.fiatEquivalentBalance
+  };
+};
+
+
+exports.removeWallet = async (userId, walletAddress) => {
+  if (!walletAddress) {
+    throw new AppError('Wallet address is required.', 400);
+  }
+
+  const user = await User.findById(userId);
+  if (!user) throw new AppError('User not found.', 404);
+
+  const walletIndex = user.connectedWallets.findIndex(
+    (w) => w.address.toLowerCase() === walletAddress.toLowerCase()
+  );
+
+  if (walletIndex === -1) {
+    throw new AppError('Wallet not found in your account.', 404);
+  }
+
+  // remove the wallet
+  const removedWallet = user.connectedWallets[walletIndex];
+  user.connectedWallets.splice(walletIndex, 1);
+
+  await user.save();
+
+  return {
+    message: 'Wallet removed successfully.',
+    removedWallet,
+    connectedWallets: user.connectedWallets
+  };
+};

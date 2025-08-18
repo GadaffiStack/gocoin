@@ -51,5 +51,8 @@ router.post('/receive/payment-link', validateBody(createPaymentLinkSchema), wall
 router.get('/receive/address', walletController.getGoTokenWalletAddress);
 router.post('/receive/bank-details', validateBody(saveBankDetailsSchema), walletController.saveBankDetailsForReceiving);
 
+router.post('/add-wallet', walletController.addWallet);
+
+router.delete('/remove-wallet', walletController.removeWallet);
 
 module.exports = router;
