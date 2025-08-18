@@ -25,10 +25,12 @@ exports.signup = async (username, email, password, referralCode) => {
         throw new AppError('Email address has been registered before.', 400, { errorType: 'email_taken' });
     }
 
+
     // Remove manual hashing, let Mongoose pre-save hook handle it
     const userReferralCode = referralGenerator.generate(); // Generate unique referral code for new user
     let referredByUserId = null;
     if (referralCode) {
+        // Accept referralCode as optional field
         const referrer = await User.findOne({ referralCode });
         if (referrer) {
             referredByUserId = referrer._id;
@@ -43,7 +45,7 @@ exports.signup = async (username, email, password, referralCode) => {
         password, // plain password
         emailVerified: false,
         referralCode: userReferralCode,
-        referredBy: referredByUserId
+        referredBy: referredByUserId // This is used by referralService to count signups
     });
 
     const otp = otpService.generateOtp();
