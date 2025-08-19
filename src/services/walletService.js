@@ -162,13 +162,14 @@ exports.withdrawFunds = async (userId, withdrawalType, details, password) => {
         user.goTokenBalance -= totalGoTokenToDeduct;
         await user.save({ session });
 
+
         let transactionDetails = {
             userId: userId,
             amountGoToken: -amountGoToken, // Negative for outgoing
             amountFiat: -amountFiat,
             fiatCurrency: fiatCurrency,
             feeGoToken: totalFeeGoToken,
-            status: 'pending', // Withdrawals might be pending external processing
+            status: 'pending', // Default to pending
             details: {
                 paymentDescription: details.paymentDescription || 'Go Token Withdrawal'
             }
@@ -178,68 +179,64 @@ exports.withdrawFunds = async (userId, withdrawalType, details, password) => {
         let transactionType;
 
         switch (withdrawalType) {
-            case 'connected':
-                // For connected wallets, we assume the address is already validated/stored
+            case 'connected': {
                 const connectedWallet = user.connectedWallets.find(w => w.address === details.toWalletAddress);
                 if (!connectedWallet) {
                     throw new AppError('Connected wallet address not found.', 400);
                 }
-                transactionType = 'crypto_send'; // Treat as a crypto send to connected wallet
+                transactionType = 'crypto_send';
                 withdrawalResult = await paymentGatewayService.processCryptoTransfer(
                     details.toWalletAddress,
-                    'GoToken', // Assuming GoTokens are sent directly
+                    'GoToken',
                     amountGoToken
                 );
                 transactionDetails.transactionId = withdrawalResult.transactionHash;
-                transactionDetails.status = withdrawalResult.status;
+                transactionDetails.status = ['pending','completed','failed','cancelled'].includes(withdrawalResult.status) ? withdrawalResult.status : 'pending';
                 transactionDetails.details.toWalletAddress = details.toWalletAddress;
                 transactionDetails.details.cryptoType = 'GoToken';
                 transactionDetails.details.networkFee = withdrawalResult.networkFee || 0;
                 break;
-
-            case 'bank':
+            }
+            case 'bank': {
                 transactionType = 'bank_withdraw';
-                // FIXED: Corrected parameter order to match processBankTransfer function signature
-                // processBankTransfer(userId, amountFiat, fiatCurrency, accountNumber, bankName, paymentDescription)
                 withdrawalResult = await paymentGatewayService.processBankTransfer(
-                    userId,                        // userId (1st parameter)
-                    amountFiat,                    // amountFiat (2nd parameter)
-                    fiatCurrency,                  // fiatCurrency (3rd parameter)
-                    details.accountNumber,         // accountNumber (4th parameter)
-                    details.bankName,              // bankName (5th parameter)
-                    details.paymentDescription     // paymentDescription (6th parameter)
+                    userId,
+                    amountFiat,
+                    fiatCurrency,
+                    details.accountNumber,
+                    details.bankName,
+                    details.paymentDescription
                 );
-                transactionDetails.transactionId = withdrawalResult.transactionId || 'sfasdfda';
-                transactionDetails.status = withdrawalResult.status;
+                transactionDetails.transactionId = withdrawalResult.transactionId || 'bank_txn';
+                transactionDetails.status = ['pending','completed','failed','cancelled'].includes(withdrawalResult.status) ? withdrawalResult.status : 'pending';
                 transactionDetails.details.accountNumber = details.accountNumber;
                 transactionDetails.details.bankName = details.bankName;
-                transactionDetails.details.beneficiaryName = details.beneficiaryName; // If applicable
-                // Note: withdrawalResult.fee might be different from transactionDetails.feeGoToken
-                // Need to decide if fees are shown in fiat or GoToken to user
+                transactionDetails.details.beneficiaryName = details.beneficiaryName;
                 break;
-
-            case 'mobile_money':
+            }
+            case 'mobile_money': {
                 transactionType = 'mobile_money_withdraw';
-
                 withdrawalResult = await paymentGatewayService.processMobileMoneyTransfer({
-                    userId: userId, // Add this if you have access to it in scope
+                    userId: userId,
                     amountFiat: amountFiat,
                     fiatCurrency: fiatCurrency,
                     mobileNumber: details.mobileNumber,
-                    network: details.network || 'MTN', // default fallback
+                    network: details.network || 'MTN',
                     paymentDescription: paymentDescription || 'Mobile money withdrawal',
-                    name: 'sim' // Ensure 'name' is included in `details`
+                    name: 'sim'
                 });
-
                 transactionDetails.transactionId = withdrawalResult.transactionId;
-                transactionDetails.status = withdrawalResult.status;
+                transactionDetails.status = ['pending','completed','failed','cancelled'].includes(withdrawalResult.status) ? withdrawalResult.status : 'pending';
                 transactionDetails.details.mobileNumber = details.mobileNumber;
                 transactionDetails.details.mobileNetwork = details.network;
                 break;
-
+            }
             default:
                 throw new AppError('Invalid withdrawal type.', 400);
         }
+
+        // Always set type before creating transaction
+        transactionDetails.type = transactionType;
 
         const transaction = await Transaction.create([transactionDetails], { session });
 
