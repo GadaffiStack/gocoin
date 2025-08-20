@@ -2,6 +2,7 @@
 const express = require('express');
 const taskController = require('../controllers/taskController');
 const authMiddleware = require('../middlewares/authMiddlewares');
+const upload = require('../services/fileUploadService');
 const { validateQuery, validateParams, validateBody, getTasksSchema, submitTaskSchema, createTaskSchema } = require('../middlewares/validationMiddleware');
 
 const router = express.Router();
@@ -11,7 +12,7 @@ router.use(authMiddleware.protect); // All routes after this are protected
 router.get('/me/activity', taskController.getUserActivity);
 router.get('/', validateQuery(getTasksSchema), taskController.getTasks);
 router.get('/:id', taskController.getTaskDetails);
-router.post('/:id/submit', validateBody(submitTaskSchema), taskController.submitTask); // Assuming ID is task ID
+router.post('/:id/submit', validateBody(submitTaskSchema), upload.single('submissionData'), taskController.submitTask); // Assuming ID is task ID
 // Admin-only route to create a new task
 router.post('/',  validateBody(createTaskSchema), taskController.createTask);
 

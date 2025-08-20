@@ -1,10 +1,17 @@
-// src/services/taskService.js
+const cloudinary = require('cloudinary').v2;
 const Task = require('../models/Task');
 const UserTask = require('../models/UserTask');
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const AppError = require('../utils/AppError');
 const notificationService = require('./notificationService'); // Added notificationService
+
+cloudinary.config({
+  cloud_name: "dzsgfbjry",
+  api_key: "944916638512926",
+  api_secret: "dDX4kmgkYOH_-UxqLPsRkGkdzQw",
+});
+
 
 exports.getTasks = async (filter, options) => {
     const { type } = filter;
@@ -35,75 +42,31 @@ exports.getTaskDetails = async (taskId) => {
     return task;
 };
 
+
+// Service function: create or update a UserTask with submissionData
 exports.submitTask = async (userId, taskId, submissionData) => {
-    const task = await Task.findById(taskId);
-    if (!task) {
-        console.error('Task not found for ID:', taskId);
-        throw new AppError('Task not found.', 404);
-    }
-
-    if (task.status === 'inactive') {
-        throw new AppError('This task is currently inactive.', 400);
-    }
-
-    // Check if user has already submitted and it's pending/completed/under review
-    let userTask = await UserTask.findOne({
-        userId,
-        taskId,
-        status: { $in: ['pending_submission', 'submitted', 'under_review', 'completed'] }
-    });
-
-    if (userTask && userTask.status === 'completed') {
-        throw new AppError('You have already completed this task.', 400);
-    }
-    if (userTask && (userTask.status === 'submitted' || userTask.status === 'under_review')) {
-        throw new AppError('You have already submitted this task, and it is under review.', 400);
-    }
-
-    // Create or update userTask entry
-    if (userTask) {
-        userTask.submissionData = submissionData;
-        userTask.status = 'submitted';
-        userTask.completionDate = undefined; // Reset completion date if resubmitting
-    } else {
+    // Find or create the UserTask for this user and task
+    let userTask = await UserTask.findOne({ userId, taskId });
+    if (!userTask) {
         userTask = new UserTask({
             userId,
             taskId,
-            submissionData,
             status: 'submitted',
-            rewardEarned: task.rewards // Store initial reward amount
+            submissionData
         });
-    }
-
-    await userTask.save();
-
-    // In a real system, this would trigger an admin review process.
-    // For this demo, we can simulate an immediate approval or set it to 'under_review'.
-    // For now, it stays 'submitted' and needs admin approval to change to 'completed'.
-    // Or, for tasks like 'watch video' with a code, it could be auto-verified.
-    // Let's assume manual review for all screenshot/link submissions and auto for 'code' tasks.
-
-    // Example auto-verification for 'code' submission
-    if (task.submissionMethod === 'code' && task.requirements.expectedCode) {
-        if (submissionData === task.requirements.expectedCode) {
-            await exports.completeTask(userTask._id);
-            return { message: 'Task submitted and auto-verified successfully!' };
-        } else {
-            userTask.status = 'rejected';
-            userTask.adminNotes = 'Incorrect code submitted.';
-            await userTask.save();
-            throw new AppError('Incorrect code. Task submission rejected.', 400);
+    } else {
+        // Only allow resubmission if not already completed or rejected
+        if (['completed', 'rejected'].includes(userTask.status)) {
+            throw new AppError('Cannot submit a completed or rejected task.', 400);
         }
+        userTask.status = 'submitted';
+        userTask.submissionData = submissionData;
     }
-
-    await notificationService.createNotification(
-        userId,
-        'reminder', // Or 'task_submitted' type
-        `Your task "${task.campaignTopic}" has been submitted and is under review.`,
-        { taskId: task._id, taskTopic: task.campaignTopic, status: 'under_review' }
-    );
-
-    return { message: task };
+    await userTask.save();
+    return {
+        message: 'Task submitted successfully for review.',
+        userTaskId: userTask._id
+    };
 };
 
 // This function would typically be called by an ADMIN or a background worker after verification.

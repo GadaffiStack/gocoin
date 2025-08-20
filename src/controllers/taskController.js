@@ -35,10 +35,29 @@ exports.getTaskDetails = catchAsync(async (req, res, next) => {
     });
 });
 
+const cloudinary = require('cloudinary').v2;
+const streamifier = require('streamifier');
+
 exports.submitTask = catchAsync(async (req, res, next) => {
     const { id } = req.params; // taskId
-    console.log('i am the id', id);
-    const { submissionData } = req.body; // link, screenshot details, survey answers, code
+    let submissionData;
+
+    if (req.file) {
+        // Upload to Cloudinary
+        const uploadResult = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+                { resource_type: 'image', folder: 'task_submissions' },
+                (error, uploaded) => {
+                    if (error) return reject(new AppError('Upload failed', 500));
+                    resolve(uploaded.secure_url);
+                }
+            );
+            streamifier.createReadStream(req.file.buffer).pipe(stream);
+        });
+        submissionData = uploadResult;
+    } else {
+        submissionData = req.body.submissionData; // For link submissions
+    }
 
     const result = await taskService.submitTask(req.user._id, id, submissionData);
 
