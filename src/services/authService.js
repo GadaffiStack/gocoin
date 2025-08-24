@@ -39,13 +39,20 @@ exports.signup = async (username, email, password, referralCode) => {
         }
     }
 
+
+    // Signup bonus
+    const signupBonusGoToken = 1000;
+    const signupBonusFiat = await cryptoPriceService.convertGoTokenToFiat(signupBonusGoToken, config.defaultFiatCurrency);
+
     const newUser = await User.create({
         username,
         email,
         password, // plain password
         emailVerified: false,
         referralCode: userReferralCode,
-        referredBy: referredByUserId // This is used by referralService to count signups
+        referredBy: referredByUserId, // This is used by referralService to count signups
+        goTokenBalance: signupBonusGoToken,
+        fiatEquivalentBalance: signupBonusFiat
     });
 
     const otp = otpService.generateOtp();
