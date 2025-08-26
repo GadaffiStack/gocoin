@@ -1,9 +1,13 @@
+exports.getUserTaskStats = async (req, res, next) => {
+    const stats = await taskService.getUserTaskStats(req.user._id);
+    res.status(200).json({ status: 'success', data: stats });
+};
 // src/controllers/taskController.js
 const catchAsync = require('../utils/catchAsync');
 const taskService = require('../services/taskService');
 const AppError = require('../utils/AppError');
 
-exports.getTasks = catchAsync(async (req, res, next) => {
+exports.getTasks = async (req, res, next) => {
     const filter = { type: req.query.type };
     const options = {
         limit: parseInt(req.query.limit, 10) || 10,
@@ -22,7 +26,7 @@ exports.getTasks = catchAsync(async (req, res, next) => {
             tasks
         }
     });
-});
+};
 
 exports.getTaskDetails = catchAsync(async (req, res, next) => {
     const task = await taskService.getTaskDetails(req.params.id);

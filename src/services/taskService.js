@@ -14,12 +14,16 @@ cloudinary.config({
 
 
 exports.getTasks = async (filter, options) => {
-    const { type } = filter;
+    const { type, completed } = filter;
     const { limit, page } = options;
 
     const query = {};
     if (type) query.type = type;
-    query.status = 'active'; // Only show active tasks
+    if (completed === 'true' || completed === true) {
+        query.status = 'completed';
+    } else {
+        query.status = 'active';
+    }
 
     const totalTasks = await Task.countDocuments(query);
     const tasks = await Task.find(query)
@@ -47,6 +51,8 @@ exports.getTaskDetails = async (taskId) => {
 exports.submitTask = async (userId, taskId, submissionData) => {
     // Find or create the UserTask for this user and task
     let userTask = await UserTask.findOne({ userId, taskId });
+    const task = await Task.findById(taskId);
+    if (!task) throw new AppError('Task not found.', 404);
     if (!userTask) {
         userTask = new UserTask({
             userId,
@@ -63,9 +69,24 @@ exports.submitTask = async (userId, taskId, submissionData) => {
         userTask.submissionData = submissionData;
     }
     await userTask.save();
+    // Increment user's goCoinBalance by task.goCoinReward
+    const user = await User.findById(userId);
+    user.goTokenBalance += task.goCoinReward;
+    await user.save();
     return {
         message: 'Task submitted successfully for review.',
         userTaskId: userTask._id
+    };
+};
+// Get total tasks and total go coins allocated for a user
+exports.getUserTaskStats = async (userId) => {
+    const userTasks = await UserTask.find({ userId });
+    const taskIds = userTasks.map(ut => ut.taskId);
+    const tasks = await Task.find({ _id: { $in: taskIds } });
+    const totalGoCoins = tasks.reduce((sum, t) => sum + (t.goCoinReward || 0), 0);
+    return {
+        totalTasks: userTasks.length,
+        totalGoCoins
     };
 };
 

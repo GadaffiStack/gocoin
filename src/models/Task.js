@@ -17,17 +17,18 @@ const taskSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Each instruction step is required']
     }],
-    rewards: {
-        goToken: {
-            type: Number,
-            required: [true, 'GoToken reward is required'],
-            min: [0, 'GoToken reward cannot be negative']
-        },
-        fiatEquivalent: { // e.g., ~$2.00 (calculated by admin or on the fly)
-            type: Number,
-            required: [true, 'Fiat equivalent reward is required'],
-            min: [0, 'Fiat equivalent reward cannot be negative']
-        }
+    goCoinReward: {
+        type: Number,
+        required: [true, 'GoCoin reward is required'],
+        min: [0, 'GoCoin reward cannot be negative']
+    },
+    startDate: {
+        type: Date,
+        required: [true, 'Start date is required']
+    },
+    endDate: {
+        type: Date,
+        required: [true, 'End date is required']
     },
     type: { // e.g., 'social_media', 'content_creation', 'app_download'
         type: String,
