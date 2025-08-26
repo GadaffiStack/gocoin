@@ -64,11 +64,14 @@ exports.submitTask = catchAsync(async (req, res, next) => {
     }
 
     const result = await taskService.submitTask(req.user._id, id, submissionData);
+    // Fetch the task to get the goCoinReward
+    const task = await taskService.getTaskDetails(id);
 
     res.status(200).json({
         status: 'success',
         message: result.message || 'Task submitted successfully for review.',
-        userTaskId: result.userTaskId
+        userTaskId: result.userTaskId,
+        goCoinReward: task.goCoinReward
     });
 });
 
