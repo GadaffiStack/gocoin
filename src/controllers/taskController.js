@@ -16,14 +16,29 @@ exports.getTasks = async (req, res, next) => {
 
     const { totalTasks, currentPage, totalPages, tasks } = await taskService.getTasks(filter, options);
 
+    // Add countdown and reward fields to each task
+    const now = new Date();
+    const tasksWithExtras = tasks.map(task => {
+        let countdown = null;
+        if (task.endDate) {
+            const end = new Date(task.endDate);
+            countdown = Math.max(0, Math.floor((end - now) / 1000)); // seconds remaining
+        }
+        return {
+            ...task.toObject(),
+            countdown,
+            reward: task.goCoinReward
+        };
+    });
+
     res.status(200).json({
         status: 'success',
-        results: tasks.length,
+        results: tasksWithExtras.length,
         data: {
             totalTasks,
             currentPage,
             totalPages,
-            tasks
+            tasks: tasksWithExtras
         }
     });
 };

@@ -185,16 +185,19 @@ exports.withdrawFunds = async (userId, withdrawalType, details, password) => {
                     throw new AppError('Connected wallet address not found.', 400);
                 }
                 transactionType = 'crypto_send';
-                withdrawalResult = await paymentGatewayService.processCryptoTransfer(
-                    details.toWalletAddress,
-                    'GoToken',
-                    amountGoToken
-                );
-                transactionDetails.transactionId = withdrawalResult.transactionHash;
-                transactionDetails.status = ['pending','completed','failed','cancelled'].includes(withdrawalResult.status) ? withdrawalResult.status : 'pending';
+                // Use pumpFunService to send GoToken on-chain
+                const pumpFunService = require('./pumpFunService');
+                let txSig;
+                try {
+                    txSig = await pumpFunService.sendGoTokenToUser(details.toWalletAddress, amountGoToken);
+                } catch (err) {
+                    throw new AppError('On-chain GoToken transfer failed: ' + err.message, 500);
+                }
+                transactionDetails.transactionId = txSig;
+                transactionDetails.status = 'completed';
                 transactionDetails.details.toWalletAddress = details.toWalletAddress;
                 transactionDetails.details.cryptoType = 'GoToken';
-                transactionDetails.details.networkFee = withdrawalResult.networkFee || 0;
+                transactionDetails.details.networkFee = 0; // Not available from SPL
                 break;
             }
             case 'bank': {

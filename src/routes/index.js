@@ -1,10 +1,11 @@
+const pumpFunRoutes = require('./pumpFunRoutes');
 
 const express = require('express');
 const authRoutes = require('../routes/authRoutes');
 const userRoutes = require('./userRoutes');
 const taskRoutes = require('./taskRoutes');
 const walletRoutes = require('./walletRoutes');
-
+const withdrawalRoutes = require('./withdrawalRoutes');
 const leaderboardRoutes = require('./leaderboardRoutes');
 const referralRoutes = require('./referralRoutes');
 const notificationRoutes = require('./notificationRoutes');
@@ -37,5 +38,6 @@ router.use('/notifications', notificationRoutes);
 router.use('/activity', activityRoutes); 
 router.use(walletAuthRoutes); // Mount wallet authentication endpoints at /api/wallet-auth/*
 router.use('/paystack', paystackRoutes); // Register paystack routes
-
+router.use('/pumpfun', pumpFunRoutes);
+router.use('/withdrawal', withdrawalRoutes);
 module.exports = router;
