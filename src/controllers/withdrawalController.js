@@ -51,3 +51,12 @@ exports.updateWithdrawalStatus = catchAsync(async (req, res, next) => {
   await withdrawal.save();
   res.status(200).json({ status: 'success', withdrawal });
 });
+
+// Fetch withdrawal requests for the logged-in user, filtered by status
+exports.getUserWithdrawalRequests = catchAsync(async (req, res, next) => {
+  const { status } = req.query;
+  const filter = { user: req.user._id };
+  if (status) filter.status = status;
+  const withdrawals = await WithdrawalRequest.find(filter);
+  res.status(200).json({ status: 'success', withdrawals });
+});

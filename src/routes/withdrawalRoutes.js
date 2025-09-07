@@ -10,5 +10,7 @@ router.post('/', protect, withdrawalController.createWithdrawalRequest);
 router.get('/', protect, withdrawalController.getWithdrawalRequests);
 // Admin updates withdrawal status
 router.patch('/:id', protect, withdrawalController.updateWithdrawalStatus);
+// User fetches their own withdrawal requests, filtered by status
+router.get('/user', protect, withdrawalController.getUserWithdrawalRequests);
 
 module.exports = router;
