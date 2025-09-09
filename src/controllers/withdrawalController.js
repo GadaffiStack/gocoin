@@ -46,6 +46,17 @@ exports.updateWithdrawalStatus = catchAsync(async (req, res, next) => {
   }
   const withdrawal = await WithdrawalRequest.findById(req.params.id);
   if (!withdrawal) return next(new AppError('Withdrawal request not found', 404));
+  // Only decrement if approving and not already approved
+  if (status === 'approved' && withdrawal.status !== 'approved') {
+    const User = require('../models/User');
+    const user = await User.findById(withdrawal.user);
+    if (!user) return next(new AppError('User not found', 404));
+    if (user.goTokenBalance < withdrawal.amount) {
+      return res.status(400).json({ error: 'Insufficient GoToken balance' });
+    }
+    user.goTokenBalance -= withdrawal.amount;
+    await user.save();
+  }
   withdrawal.status = status;
   if (txHash) withdrawal.txHash = txHash;
   await withdrawal.save();
